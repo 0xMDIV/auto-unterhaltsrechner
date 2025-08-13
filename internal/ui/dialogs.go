@@ -5,12 +5,14 @@ import (
 	"encoding/csv"
 	"fmt"
 	"strings"
+	"time"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
+	"github.com/jung-kurt/gofpdf"
 )
 
 func (a *App) showLoadDialog() {
@@ -63,7 +65,7 @@ func (a *App) showExportDialog() {
 		return
 	}
 
-	exportOptions := []string{"CSV Export", "JSON Export"}
+	exportOptions := []string{"CSV Export", "JSON Export", "PDF Export"}
 	exportSelect := widget.NewSelect(exportOptions, nil)
 	exportSelect.SetSelected("CSV Export")
 
@@ -79,6 +81,8 @@ func (a *App) showExportDialog() {
 					a.exportToCSV(calculation)
 				case "JSON Export":
 					a.exportToJSON(a.currentProfile)
+				case "PDF Export":
+					a.exportToPDF(calculation)
 				}
 			}
 		}, a.window)
@@ -155,6 +159,168 @@ func (a *App) exportToJSON(profile *models.CarProfile) {
 		}
 
 		dialog.ShowInformation("Export erfolgreich", "Das Profil wurde erfolgreich exportiert.", a.window)
+	}, a.window)
+}
+
+func (a *App) exportToPDF(calculation *models.CostCalculation) {
+	dialog.ShowFileSave(func(writer fyne.URIWriteCloser, err error) {
+		if err != nil {
+			dialog.ShowError(err, a.window)
+			return
+		}
+		if writer == nil {
+			return
+		}
+		defer writer.Close()
+
+		// Create PDF
+		pdf := gofpdf.New("P", "mm", "A4", "")
+		pdf.AddPage()
+
+		// Set font
+		pdf.SetFont("Arial", "B", 16)
+
+		// Title
+		pdf.Cell(0, 10, "Auto-Unterhaltsrechner - Kostenaufstellung")
+		pdf.Ln(15)
+
+		// Profile info
+		pdf.SetFont("Arial", "B", 12)
+		pdf.Cell(0, 8, "Fahrzeugprofil: "+calculation.Profile.Name)
+		pdf.Ln(8)
+
+		pdf.SetFont("Arial", "", 10)
+		pdf.Cell(0, 6, "Erstellt am: "+time.Now().Format("02.01.2006 15:04"))
+		pdf.Ln(10)
+
+		// Monthly costs section
+		pdf.SetFont("Arial", "B", 12)
+		pdf.Cell(0, 8, "Monatliche Kosten")
+		pdf.Ln(8)
+
+		pdf.SetFont("Arial", "", 10)
+		pdf.Cell(80, 6, "Kraftstoffkosten:")
+		pdf.Cell(0, 6, FormatCurrency(calculation.MonthlyFuelCost))
+		pdf.Ln(6)
+
+		pdf.Cell(80, 6, "Stromkosten:")
+		pdf.Cell(0, 6, FormatCurrency(calculation.MonthlyElectricityCost))
+		pdf.Ln(6)
+
+		pdf.Cell(80, 6, "KFZ-Steuer:")
+		pdf.Cell(0, 6, FormatCurrency(calculation.Profile.AnnualCarTax/12))
+		pdf.Ln(6)
+
+		pdf.Cell(80, 6, "Versicherung:")
+		pdf.Cell(0, 6, FormatCurrency(calculation.Profile.AnnualCarInsurance/12))
+		pdf.Ln(6)
+
+		pdf.Cell(80, 6, "Finanzierung/Leasing:")
+		pdf.Cell(0, 6, FormatCurrency(calculation.Profile.FinancingRate))
+		pdf.Ln(6)
+
+		pdf.SetFont("Arial", "B", 10)
+		pdf.Cell(80, 6, "Gesamtkosten monatlich:")
+		pdf.Cell(0, 6, FormatCurrency(calculation.MonthlyRunningCosts))
+		pdf.Ln(12)
+
+		// Annual costs section
+		pdf.SetFont("Arial", "B", 12)
+		pdf.Cell(0, 8, "Jährliche Kosten")
+		pdf.Ln(8)
+
+		pdf.SetFont("Arial", "", 10)
+		pdf.Cell(80, 6, "Kraftstoffkosten:")
+		pdf.Cell(0, 6, FormatCurrency(calculation.AnnualFuelCost))
+		pdf.Ln(6)
+
+		pdf.Cell(80, 6, "Stromkosten:")
+		pdf.Cell(0, 6, FormatCurrency(calculation.AnnualElectricityCost))
+		pdf.Ln(6)
+
+		pdf.Cell(80, 6, "KFZ-Steuer:")
+		pdf.Cell(0, 6, FormatCurrency(calculation.Profile.AnnualCarTax))
+		pdf.Ln(6)
+
+		pdf.Cell(80, 6, "Versicherung:")
+		pdf.Cell(0, 6, FormatCurrency(calculation.Profile.AnnualCarInsurance))
+		pdf.Ln(6)
+
+		pdf.Cell(80, 6, "Finanzierung/Leasing:")
+		pdf.Cell(0, 6, FormatCurrency(calculation.Profile.FinancingRate*12))
+		pdf.Ln(6)
+
+		pdf.SetFont("Arial", "B", 10)
+		pdf.Cell(80, 6, "Gesamtkosten jährlich:")
+		pdf.Cell(0, 6, FormatCurrency(calculation.AnnualRunningCosts))
+		pdf.Ln(12)
+
+		// Depreciation section
+		pdf.SetFont("Arial", "B", 12)
+		pdf.Cell(0, 8, "Wertverlust")
+		pdf.Ln(8)
+
+		pdf.SetFont("Arial", "", 10)
+		pdf.Cell(80, 6, "Kaufpreis:")
+		pdf.Cell(0, 6, FormatCurrency(calculation.Profile.PurchasePrice))
+		pdf.Ln(6)
+
+		pdf.Cell(80, 6, "Besitzdauer:")
+		pdf.Cell(0, 6, fmt.Sprintf("%d Jahre", calculation.Profile.ExpectedYearsOfOwnership))
+		pdf.Ln(6)
+
+		pdf.Cell(80, 6, "Jährlicher Wertverlust:")
+		pdf.Cell(0, 6, FormatCurrency(calculation.AnnualDepreciation))
+		pdf.Ln(12)
+
+		// Key metrics section
+		pdf.SetFont("Arial", "B", 12)
+		pdf.Cell(0, 8, "Kennzahlen")
+		pdf.Ln(8)
+
+		pdf.SetFont("Arial", "", 10)
+		pdf.Cell(80, 6, "Kosten pro Kilometer:")
+		pdf.Cell(0, 6, FormatCurrency(calculation.CostPerKilometer))
+		pdf.Ln(6)
+
+		pdf.Cell(80, 6, "Monatliche Fahrleistung:")
+		pdf.Cell(0, 6, FormatKilometers(calculation.Profile.MonthlyKilometers))
+		pdf.Ln(6)
+
+		pdf.Cell(80, 6, "Gesamtkosten der Nutzung:")
+		pdf.Cell(0, 6, FormatCurrency(calculation.TotalCostOfOwnership))
+		pdf.Ln(12)
+
+		// Consumption section if applicable
+		if calculation.Profile.FuelConsumption > 0 || calculation.Profile.ElectricConsumption > 0 {
+			pdf.SetFont("Arial", "B", 12)
+			pdf.Cell(0, 8, "Verbrauchsdaten")
+			pdf.Ln(8)
+
+			pdf.SetFont("Arial", "", 10)
+			if calculation.Profile.FuelConsumption > 0 {
+				monthlyFuel := (calculation.Profile.FuelConsumption * calculation.Profile.MonthlyKilometers) / 100
+				pdf.Cell(80, 6, "Kraftstoffverbrauch monatlich:")
+				pdf.Cell(0, 6, FormatLiters(monthlyFuel))
+				pdf.Ln(6)
+			}
+
+			if calculation.Profile.ElectricConsumption > 0 {
+				monthlyElectric := (calculation.Profile.ElectricConsumption * calculation.Profile.MonthlyKilometers) / 100
+				pdf.Cell(80, 6, "Stromverbrauch monatlich:")
+				pdf.Cell(0, 6, FormatKWh(monthlyElectric))
+				pdf.Ln(6)
+			}
+		}
+
+		// Save PDF
+		err = pdf.Output(writer)
+		if err != nil {
+			dialog.ShowError(err, a.window)
+			return
+		}
+
+		dialog.ShowInformation("Export erfolgreich", "Das PDF wurde erfolgreich erstellt.", a.window)
 	}, a.window)
 }
 
