@@ -545,11 +545,20 @@ func (a *App) createTextChart(profiles []*models.CarProfile, calculations []*mod
 }
 
 func (a *App) showSettingsDialog() {
-	themeSelect := widget.NewSelect([]string{"Hell", "Dunkel"}, nil)
+	translations := a.getCurrentTranslations()
+
+	themeSelect := widget.NewSelect([]string{translations.ThemeLight, translations.ThemeDark}, nil)
 	if a.settings.Theme == "dark" {
-		themeSelect.SetSelected("Dunkel")
+		themeSelect.SetSelected(translations.ThemeDark)
 	} else {
-		themeSelect.SetSelected("Hell")
+		themeSelect.SetSelected(translations.ThemeLight)
+	}
+
+	languageSelect := widget.NewSelect([]string{translations.LanguageGerman, translations.LanguageEnglish}, nil)
+	if a.settings.Language == "en" {
+		languageSelect.SetSelected(translations.LanguageEnglish)
+	} else {
+		languageSelect.SetSelected(translations.LanguageGerman)
 	}
 
 	fuelPriceEntry := widget.NewEntry()
@@ -559,22 +568,35 @@ func (a *App) showSettingsDialog() {
 	electricityPriceEntry.SetText(FormatGermanNumber(a.settings.DefaultElectricityPrice, 2))
 
 	form := widget.NewForm(
-		widget.NewFormItem("Design", themeSelect),
-		widget.NewFormItem("Standard Kraftstoffpreis (€/L)", fuelPriceEntry),
-		widget.NewFormItem("Standard Strompreis (€/kWh)", electricityPriceEntry),
+		widget.NewFormItem(translations.SettingsTheme, themeSelect),
+		widget.NewFormItem(translations.SettingsLanguage, languageSelect),
+		widget.NewFormItem(translations.SettingsDefaultFuel, fuelPriceEntry),
+		widget.NewFormItem(translations.SettingsDefaultElec, electricityPriceEntry),
 	)
 
-	dialog.ShowCustomConfirm("Einstellungen", "Speichern", "Abbrechen", form,
+	dialog.ShowCustomConfirm(translations.SettingsTitle, translations.SettingsSave, translations.SettingsCancel, form,
 		func(confirmed bool) {
 			if confirmed {
 				// Update theme
-				if themeSelect.Selected == "Dunkel" {
+				if themeSelect.Selected == translations.ThemeDark {
 					a.settings.Theme = "dark"
 					a.fyneApp.Settings().SetTheme(theme.DarkTheme())
 				} else {
 					a.settings.Theme = "light"
 					a.fyneApp.Settings().SetTheme(theme.LightTheme())
 				}
+
+				// Update language
+				if languageSelect.Selected == translations.LanguageEnglish {
+					a.settings.Language = "en"
+				} else {
+					a.settings.Language = "de"
+				}
+
+				// Update window title and UI
+				newTranslations := a.getCurrentTranslations()
+				a.window.SetTitle(newTranslations.AppTitle)
+				a.refreshUI()
 
 				// Update default prices
 				if val, err := ParseGermanNumber(fuelPriceEntry.Text); err == nil {

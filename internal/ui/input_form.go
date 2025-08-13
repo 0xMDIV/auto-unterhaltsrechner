@@ -13,6 +13,7 @@ import (
 )
 
 func (a *App) createInputForm() *fyne.Container {
+	translations := a.getCurrentTranslations()
 	// Profile selection
 	a.profileSelect = widget.NewSelect([]string{}, func(value string) {
 		a.loadSelectedProfile(value)
@@ -57,25 +58,21 @@ func (a *App) createInputForm() *fyne.Container {
 	}
 
 	// Fuel type
-	fuelTypes := make([]string, len(models.GetFuelTypes()))
-	for i, ft := range models.GetFuelTypes() {
-		fuelTypes[i] = string(ft)
-	}
+	fuelTypes := a.getTranslatedFuelTypes()
 	a.fuelTypeSelect = widget.NewSelect(fuelTypes, func(value string) {
 		if a.currentProfile != nil {
-			a.currentProfile.FuelType = models.FuelType(value)
+			fuelTypeKey := a.getFuelTypeFromTranslation(value)
+			a.currentProfile.FuelType = models.FuelType(fuelTypeKey)
 			a.updateResults()
 		}
 	})
 
 	// Electricity type
-	electricityTypes := make([]string, len(models.GetElectricityTypes()))
-	for i, et := range models.GetElectricityTypes() {
-		electricityTypes[i] = string(et)
-	}
+	electricityTypes := a.getTranslatedElectricityTypes()
 	a.electricityTypeSelect = widget.NewSelect(electricityTypes, func(value string) {
 		if a.currentProfile != nil {
-			a.currentProfile.ElectricityType = models.ElectricityType(value)
+			electricityTypeKey := a.getElectricityTypeFromTranslation(value)
+			a.currentProfile.ElectricityType = models.ElectricityType(electricityTypeKey)
 			a.updateResults()
 		}
 	})
@@ -145,68 +142,68 @@ func (a *App) createInputForm() *fyne.Container {
 
 	// Create form sections
 	profileForm := widget.NewForm(
-		widget.NewFormItem("Profil auswählen", a.profileSelect),
-		widget.NewFormItem("Profilname", a.nameEntry),
+		widget.NewFormItem(translations.ProfileSelect, a.profileSelect),
+		widget.NewFormItem(translations.ProfileName, a.nameEntry),
 	)
 	profileSection := container.NewVBox(
-		widget.NewCard("Profil", "", profileForm),
+		widget.NewCard(translations.ProfileTitle, "", profileForm),
 	)
 
 	consumptionForm := widget.NewForm(
-		widget.NewFormItem("Kraftstoffverbrauch (L/100km)", a.fuelConsumptionEntry),
-		widget.NewFormItem("Stromverbrauch (kWh/100km)", a.electricConsumptionEntry),
+		widget.NewFormItem(translations.FuelConsumption, a.fuelConsumptionEntry),
+		widget.NewFormItem(translations.ElectricConsumption, a.electricConsumptionEntry),
 	)
 	consumptionSection := container.NewVBox(
-		widget.NewCard("Verbrauch", "", consumptionForm),
+		widget.NewCard(translations.ConsumptionTitle, "", consumptionForm),
 	)
 
 	pricesForm := widget.NewForm(
-		widget.NewFormItem("Kraftstoffpreis (€/L)", a.fuelPriceEntry),
-		widget.NewFormItem("Strompreis (€/kWh)", a.electricityPriceEntry),
-		widget.NewFormItem("Kraftstoffart", a.fuelTypeSelect),
-		widget.NewFormItem("Stromart", a.electricityTypeSelect),
+		widget.NewFormItem(translations.FuelPrice, a.fuelPriceEntry),
+		widget.NewFormItem(translations.ElectricityPrice, a.electricityPriceEntry),
+		widget.NewFormItem(translations.FuelType, a.fuelTypeSelect),
+		widget.NewFormItem(translations.ElectricityType, a.electricityTypeSelect),
 	)
 	pricesSection := container.NewVBox(
-		widget.NewCard("Preise", "", pricesForm),
+		widget.NewCard(translations.PricesTitle, "", pricesForm),
 	)
 
 	capacityForm := widget.NewForm(
-		widget.NewFormItem("Tankgröße (L)", a.tankSizeEntry),
-		widget.NewFormItem("Batteriegröße (kWh)", a.batterySizeEntry),
+		widget.NewFormItem(translations.TankSize, a.tankSizeEntry),
+		widget.NewFormItem(translations.BatterySize, a.batterySizeEntry),
 	)
 	capacitySection := container.NewVBox(
-		widget.NewCard("Kapazitäten", "", capacityForm),
+		widget.NewCard(translations.CapacityTitle, "", capacityForm),
 	)
 
 	usageForm := widget.NewForm(
-		widget.NewFormItem("Monatliche Kilometer", a.monthlyKmEntry),
+		widget.NewFormItem(translations.MonthlyKilometers, a.monthlyKmEntry),
 	)
 	usageSection := container.NewVBox(
-		widget.NewCard("Nutzung", "", usageForm),
+		widget.NewCard(translations.UsageTitle, "", usageForm),
 	)
 
 	costsForm := widget.NewForm(
-		widget.NewFormItem("Jährliche KFZ-Steuer (€)", a.annualTaxEntry),
-		widget.NewFormItem("Jährliche Versicherung (€)", a.annualInsuranceEntry),
+		widget.NewFormItem(translations.AnnualTax, a.annualTaxEntry),
+		widget.NewFormItem(translations.AnnualInsurance, a.annualInsuranceEntry),
 	)
 	costsSection := container.NewVBox(
-		widget.NewCard("Fixkosten", "", costsForm),
+		widget.NewCard(translations.CostsTitle, "", costsForm),
 	)
 
 	financingForm := widget.NewForm(
-		widget.NewFormItem("Finanzierungsrate (€/Monat)", a.financingRateEntry),
-		widget.NewFormItem("Finanzierungslaufzeit (Monate)", a.financingPeriodEntry),
+		widget.NewFormItem(translations.FinancingRate, a.financingRateEntry),
+		widget.NewFormItem(translations.FinancingPeriod, a.financingPeriodEntry),
 	)
 	financingSection := container.NewVBox(
-		widget.NewCard("Finanzierung", "", financingForm),
+		widget.NewCard(translations.FinancingTitle, "", financingForm),
 	)
 
 	depreciationForm := widget.NewForm(
-		widget.NewFormItem("Kaufpreis (€)", a.purchasePriceEntry),
-		widget.NewFormItem("Erwartete Besitzdauer (Jahre)", a.ownershipYearsEntry),
+		widget.NewFormItem(translations.PurchasePrice, a.purchasePriceEntry),
+		widget.NewFormItem(translations.OwnershipYears, a.ownershipYearsEntry),
 	)
 	depreciationSection := container.NewVBox(
-		widget.NewCard("Wertverlust", "", depreciationForm),
+		widget.NewCard(translations.DepreciationTitle, "", depreciationForm),
 	)
 
 	return container.NewVBox(
@@ -273,8 +270,8 @@ func (a *App) updateInputForm() {
 	a.electricConsumptionEntry.SetText(FormatGermanNumber(a.currentProfile.ElectricConsumption, 1))
 	a.fuelPriceEntry.SetText(FormatGermanNumber(a.currentProfile.FuelPrice, 2))
 	a.electricityPriceEntry.SetText(FormatGermanNumber(a.currentProfile.ElectricityPrice, 2))
-	a.fuelTypeSelect.SetSelected(string(a.currentProfile.FuelType))
-	a.electricityTypeSelect.SetSelected(string(a.currentProfile.ElectricityType))
+	a.fuelTypeSelect.SetSelected(a.translateFuelType(string(a.currentProfile.FuelType)))
+	a.electricityTypeSelect.SetSelected(a.translateElectricityType(string(a.currentProfile.ElectricityType)))
 	a.tankSizeEntry.SetText(FormatGermanNumber(a.currentProfile.TankSize, 0))
 	a.batterySizeEntry.SetText(FormatGermanNumber(a.currentProfile.BatterySize, 0))
 	a.monthlyKmEntry.SetText(FormatGermanNumber(a.currentProfile.MonthlyKilometers, 0))
@@ -333,8 +330,8 @@ func (a *App) updateProfileFromForm() {
 		a.currentProfile.ExpectedYearsOfOwnership = val
 	}
 
-	a.currentProfile.FuelType = models.FuelType(a.fuelTypeSelect.Selected)
-	a.currentProfile.ElectricityType = models.ElectricityType(a.electricityTypeSelect.Selected)
+	a.currentProfile.FuelType = models.FuelType(a.getFuelTypeFromTranslation(a.fuelTypeSelect.Selected))
+	a.currentProfile.ElectricityType = models.ElectricityType(a.getElectricityTypeFromTranslation(a.electricityTypeSelect.Selected))
 }
 
 func (a *App) loadSelectedProfile(value string) {

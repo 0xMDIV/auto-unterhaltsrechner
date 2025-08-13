@@ -85,6 +85,7 @@ const (
 
 // Helper function to add tooltips to existing widgets
 func (a *App) addTooltips() {
-	// This would be called after creating the form to add tooltips to existing widgets
-	// Implementation would depend on how tooltips are displayed in the final UI
+	// Note: Tooltips are not available in this version of Fyne
+	// The tooltip constants are available for future use or documentation
+	// For now, placeholders already provide some guidance
 }

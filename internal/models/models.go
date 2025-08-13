@@ -5,18 +5,18 @@ import "time"
 type FuelType string
 
 const (
-	Diesel         FuelType = "Diesel"
-	Ultimate       FuelType = "Ultimate"
-	Super          FuelType = "Super"
-	SuperPlus      FuelType = "SuperPlus"
-	UltimateDiesel FuelType = "Ultimate Diesel"
+	Diesel         FuelType = "diesel"
+	Ultimate       FuelType = "ultimate"
+	Super          FuelType = "super"
+	SuperPlus      FuelType = "super_plus"
+	UltimateDiesel FuelType = "ultimate_diesel"
 )
 
 type ElectricityType string
 
 const (
-	HomeSocket            ElectricityType = "Home socket"
-	PublicChargingStation ElectricityType = "Public charging station"
+	HomeSocket            ElectricityType = "home_socket"
+	PublicChargingStation ElectricityType = "public_charging_station"
 )
 
 type CarProfile struct {
@@ -62,7 +62,8 @@ type ComparisonResult struct {
 }
 
 type AppSettings struct {
-	Theme                   string  `json:"theme"` // "light" or "dark"
+	Theme                   string  `json:"theme"`    // "light" or "dark"
+	Language                string  `json:"language"` // "de" or "en"
 	DefaultFuelPrice        float64 `json:"default_fuel_price"`
 	DefaultElectricityPrice float64 `json:"default_electricity_price"`
 	LastProfilesDir         string  `json:"last_profiles_dir"`

@@ -30,6 +30,7 @@ type App struct {
 	profileSelect *widget.Select
 	inputForm     *fyne.Container
 	resultsView   *fyne.Container
+	mainContent   *container.Split
 
 	// Input widgets
 	nameEntry                *widget.Entry
@@ -54,9 +55,13 @@ func NewApp() *App {
 	fyneApp := app.NewWithID("auto-unterhaltsrechner")
 	fyneApp.SetIcon(theme.ComputerIcon())
 
+	// Title will be set after settings are loaded
 	window := fyneApp.NewWindow("Auto-Unterhaltsrechner v0.1")
-	window.Resize(fyne.NewSize(1000, 700))
+
+	// Set window to reasonable size (75% of common 1920x1080 screen)
+	window.Resize(fyne.NewSize(1440, 810))
 	window.SetMaster()
+	window.CenterOnScreen()
 
 	// Set close handler to properly exit the application
 	window.SetCloseIntercept(func() {
@@ -70,6 +75,7 @@ func NewApp() *App {
 	if settings == nil {
 		settings = &models.AppSettings{
 			Theme:                   "light",
+			Language:                "de",
 			DefaultFuelPrice:        1.65,
 			DefaultElectricityPrice: 0.35,
 		}
@@ -84,9 +90,21 @@ func NewApp() *App {
 	}
 
 	appInstance.setupUI()
+	appInstance.addTooltips()
 	appInstance.loadProfiles()
 
 	return appInstance
+}
+
+func (a *App) refreshUI() {
+	// Recreate the entire UI
+	a.setupUI()
+
+	// Restore current profile data
+	if a.currentProfile != nil {
+		a.updateInputForm()
+		a.updateResults()
+	}
 }
 
 func (a *App) setupUI() {
@@ -97,19 +115,23 @@ func (a *App) setupUI() {
 		a.fyneApp.Settings().SetTheme(theme.LightTheme())
 	}
 
+	// Set window title based on language
+	translations := a.getCurrentTranslations()
+	a.window.SetTitle(translations.AppTitle)
+
 	// Create toolbar
 	toolbar := a.createToolbar()
 
 	// Create main content
-	content := a.createMainContent()
+	a.mainContent = a.createMainContent()
 
 	// Layout
 	borderContainer := container.NewBorder(
-		toolbar, // top
-		nil,     // bottom
-		nil,     // left
-		nil,     // right
-		content, // center
+		toolbar,       // top
+		nil,           // bottom
+		nil,           // left
+		nil,           // right
+		a.mainContent, // center
 	)
 
 	a.window.SetContent(borderContainer)
@@ -156,11 +178,12 @@ func (a *App) createMainContent() *container.Split {
 	// Right side - results
 	a.resultsView = a.createResultsView()
 
-	leftPanel := container.NewScroll(a.inputForm)
-	leftPanel.SetMinSize(fyne.NewSize(400, 600))
+	// Use Border containers to provide stable sizing
+	leftPanel := container.NewBorder(nil, nil, nil, nil,
+		container.NewScroll(a.inputForm))
 
-	rightPanel := container.NewScroll(a.resultsView)
-	rightPanel.SetMinSize(fyne.NewSize(400, 600))
+	rightPanel := container.NewBorder(nil, nil, nil, nil,
+		container.NewScroll(a.resultsView))
 
 	split := container.NewHSplit(leftPanel, rightPanel)
 	split.SetOffset(0.5)
