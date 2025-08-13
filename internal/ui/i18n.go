@@ -124,6 +124,10 @@ type Translations struct {
 	DialogLoad             string
 	DialogCancel           string
 
+	// Default messages
+	ResultsTitle         string
+	SelectProfileMessage string
+
 	// Tooltips
 	TooltipProfileName         string
 	TooltipFuelConsumption     string
@@ -253,6 +257,9 @@ var GermanTranslations = Translations{
 	DialogLoad:             "Laden",
 	DialogCancel:           "Abbrechen",
 
+	ResultsTitle:         "Berechnungsergebnisse",
+	SelectProfileMessage: "Wählen Sie ein Profil aus oder erstellen Sie ein neues",
+
 	TooltipProfileName:         "Eindeutiger Name für dieses Fahrzeugprofil",
 	TooltipFuelConsumption:     "Durchschnittlicher Kraftstoffverbrauch des Fahrzeugs in Litern pro 100 Kilometer.",
 	TooltipElectricConsumption: "Durchschnittlicher Stromverbrauch des Elektro-/Hybridfahrzeugs in kWh pro 100 Kilometer.",
@@ -380,6 +387,9 @@ var EnglishTranslations = Translations{
 	DialogSaved:            "Saved",
 	DialogLoad:             "Load",
 	DialogCancel:           "Cancel",
+
+	ResultsTitle:         "Calculation Results",
+	SelectProfileMessage: "Select a profile or create a new one",
 
 	TooltipProfileName:         "Unique name for this vehicle profile",
 	TooltipFuelConsumption:     "Average fuel consumption of the vehicle in liters per 100 kilometers.",

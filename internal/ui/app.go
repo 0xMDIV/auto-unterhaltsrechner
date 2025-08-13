@@ -197,7 +197,11 @@ func (a *App) Run() {
 
 func (a *App) newProfile() {
 	a.currentProfile = models.NewCarProfile()
-	a.currentProfile.Name = "Neues Profil"
+	if a.settings.Language == "en" {
+		a.currentProfile.Name = "New Profile"
+	} else {
+		a.currentProfile.Name = "Neues Profil"
+	}
 	a.currentProfile.FuelPrice = a.settings.DefaultFuelPrice
 	a.currentProfile.ElectricityPrice = a.settings.DefaultElectricityPrice
 	a.updateInputForm()

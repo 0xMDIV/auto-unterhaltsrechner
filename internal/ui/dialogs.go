@@ -182,145 +182,157 @@ func (a *App) exportToPDF(calculation *models.CostCalculation) {
 		}
 		defer writer.Close()
 
-		// Create PDF
+		// Get translations for PDF
+		translations := a.getCurrentTranslations()
+
+		// Create PDF with enhanced layout
 		pdf := gofpdf.New("P", "mm", "A4", "")
 		pdf.AddPage()
 
-		// Set font
-		pdf.SetFont("Arial", "B", 16)
+		// Define colors
+		headerColor := []int{52, 73, 94}     // Dark blue-gray
+		sectionColor := []int{236, 240, 241} // Light gray
+		totalColor := []int{231, 76, 60}     // Red for totals
 
-		// Title
-		pdf.Cell(0, 10, "Auto-Unterhaltsrechner - Kostenaufstellung")
-		pdf.Ln(15)
+		// Header with background color
+		pdf.SetFillColor(headerColor[0], headerColor[1], headerColor[2])
+		pdf.SetTextColor(255, 255, 255)
+		pdf.SetFont("Arial", "B", 18)
+		pdf.CellFormat(0, 15, translations.AppTitle, "0", 1, "C", true, 0, "")
+		pdf.SetTextColor(0, 0, 0) // Reset text color
+		pdf.Ln(5)
 
-		// Profile info
-		pdf.SetFont("Arial", "B", 12)
-		pdf.Cell(0, 8, "Fahrzeugprofil: "+calculation.Profile.Name)
-		pdf.Ln(8)
-
-		pdf.SetFont("Arial", "", 10)
-		pdf.Cell(0, 6, "Erstellt am: "+time.Now().Format("02.01.2006 15:04"))
+		// Subheader
+		pdf.SetFont("Arial", "I", 12)
+		pdf.CellFormat(0, 8, "Kostenaufstellung", "0", 1, "C", false, 0, "")
 		pdf.Ln(10)
 
-		// Monthly costs section
+		// Profile info in a box
+		pdf.SetFillColor(sectionColor[0], sectionColor[1], sectionColor[2])
 		pdf.SetFont("Arial", "B", 12)
-		pdf.Cell(0, 8, "Monatliche Kosten")
+		pdf.CellFormat(0, 8, "Fahrzeugprofil", "1", 1, "L", true, 0, "")
+		pdf.SetFont("Arial", "", 10)
+		pdf.CellFormat(0, 6, "Name: "+calculation.Profile.Name, "LR", 1, "L", false, 0, "")
+		pdf.CellFormat(0, 6, "Erstellt am: "+time.Now().Format("02.01.2006 15:04"), "LRB", 1, "L", false, 0, "")
 		pdf.Ln(8)
 
-		pdf.SetFont("Arial", "", 10)
-		pdf.Cell(80, 6, "Kraftstoffkosten:")
-		pdf.Cell(0, 6, FormatCurrencyPDF(calculation.MonthlyFuelCost))
-		pdf.Ln(6)
+		// Helper function to create a section with table
+		createSection := func(title string, data [][]string, showTotal bool, totalAmount float64) {
+			// Section header
+			pdf.SetFillColor(sectionColor[0], sectionColor[1], sectionColor[2])
+			pdf.SetFont("Arial", "B", 12)
+			pdf.CellFormat(0, 8, title, "1", 1, "L", true, 0, "")
 
-		pdf.Cell(80, 6, "Stromkosten:")
-		pdf.Cell(0, 6, FormatCurrencyPDF(calculation.MonthlyElectricityCost))
-		pdf.Ln(6)
+			// Table rows
+			pdf.SetFont("Arial", "", 10)
+			for _, row := range data {
+				if len(row) >= 2 {
+					pdf.CellFormat(100, 6, row[0], "LR", 0, "L", false, 0, "")
+					pdf.CellFormat(0, 6, row[1], "LR", 1, "R", false, 0, "")
+				}
+			}
 
-		pdf.Cell(80, 6, "KFZ-Steuer:")
-		pdf.Cell(0, 6, FormatCurrencyPDF(calculation.Profile.AnnualCarTax/12))
-		pdf.Ln(6)
+			// Total row if needed
+			if showTotal {
+				pdf.SetFillColor(totalColor[0], totalColor[1], totalColor[2])
+				pdf.SetTextColor(255, 255, 255)
+				pdf.SetFont("Arial", "B", 10)
+				pdf.CellFormat(100, 8, "Gesamt:", "LR", 0, "L", true, 0, "")
+				pdf.CellFormat(0, 8, FormatCurrencyPDF(totalAmount), "LR", 1, "R", true, 0, "")
+				pdf.SetTextColor(0, 0, 0)
+			}
 
-		pdf.Cell(80, 6, "Versicherung:")
-		pdf.Cell(0, 6, FormatCurrencyPDF(calculation.Profile.AnnualCarInsurance/12))
-		pdf.Ln(6)
+			// Bottom border
+			pdf.CellFormat(0, 0, "", "B", 1, "", false, 0, "")
+			pdf.Ln(6)
+		}
 
-		pdf.Cell(80, 6, "Finanzierung/Leasing:")
-		pdf.Cell(0, 6, FormatCurrencyPDF(calculation.Profile.FinancingRate))
-		pdf.Ln(6)
+		// Monthly costs table
+		monthlyData := [][]string{
+			{translations.FuelCosts[:len(translations.FuelCosts)-2], FormatCurrencyPDF(calculation.MonthlyFuelCost)},
+			{translations.ElectricityCosts[:len(translations.ElectricityCosts)-2], FormatCurrencyPDF(calculation.MonthlyElectricityCost)},
+			{translations.TaxCosts[:len(translations.TaxCosts)-2], FormatCurrencyPDF(calculation.Profile.AnnualCarTax / 12)},
+			{translations.InsuranceCosts[:len(translations.InsuranceCosts)-2], FormatCurrencyPDF(calculation.Profile.AnnualCarInsurance / 12)},
+			{translations.FinancingCosts[:len(translations.FinancingCosts)-2], FormatCurrencyPDF(calculation.Profile.FinancingRate)},
+		}
+		createSection(translations.ResultsMonthlyCosts, monthlyData, true, calculation.MonthlyRunningCosts)
 
-		pdf.SetFont("Arial", "B", 10)
-		pdf.Cell(80, 6, "Gesamtkosten monatlich:")
-		pdf.Cell(0, 6, FormatCurrencyPDF(calculation.MonthlyRunningCosts))
-		pdf.Ln(12)
+		// Annual costs table
+		annualData := [][]string{
+			{translations.FuelCosts[:len(translations.FuelCosts)-2], FormatCurrencyPDF(calculation.AnnualFuelCost)},
+			{translations.ElectricityCosts[:len(translations.ElectricityCosts)-2], FormatCurrencyPDF(calculation.AnnualElectricityCost)},
+			{translations.TaxCosts[:len(translations.TaxCosts)-2], FormatCurrencyPDF(calculation.Profile.AnnualCarTax)},
+			{translations.InsuranceCosts[:len(translations.InsuranceCosts)-2], FormatCurrencyPDF(calculation.Profile.AnnualCarInsurance)},
+			{translations.FinancingCosts[:len(translations.FinancingCosts)-2], FormatCurrencyPDF(calculation.Profile.FinancingRate * 12)},
+		}
+		createSection(translations.ResultsAnnualCosts, annualData, true, calculation.AnnualRunningCosts)
 
-		// Annual costs section
-		pdf.SetFont("Arial", "B", 12)
-		pdf.Cell(0, 8, "Jährliche Kosten")
-		pdf.Ln(8)
+		// Key metrics table
+		metricsData := [][]string{
+			{translations.CostPerKilometer[:len(translations.CostPerKilometer)-2], FormatCurrencyPDF(calculation.CostPerKilometer)},
+			{"Monatliche Fahrleistung:", FormatKilometers(calculation.Profile.MonthlyKilometers)},
+			{translations.TotalOwnershipCost[:len(translations.TotalOwnershipCost)-2], FormatCurrencyPDF(calculation.TotalCostOfOwnership)},
+		}
+		createSection(translations.ResultsKeyMetrics, metricsData, false, 0)
 
-		pdf.SetFont("Arial", "", 10)
-		pdf.Cell(80, 6, "Kraftstoffkosten:")
-		pdf.Cell(0, 6, FormatCurrencyPDF(calculation.AnnualFuelCost))
-		pdf.Ln(6)
-
-		pdf.Cell(80, 6, "Stromkosten:")
-		pdf.Cell(0, 6, FormatCurrencyPDF(calculation.AnnualElectricityCost))
-		pdf.Ln(6)
-
-		pdf.Cell(80, 6, "KFZ-Steuer:")
-		pdf.Cell(0, 6, FormatCurrencyPDF(calculation.Profile.AnnualCarTax))
-		pdf.Ln(6)
-
-		pdf.Cell(80, 6, "Versicherung:")
-		pdf.Cell(0, 6, FormatCurrencyPDF(calculation.Profile.AnnualCarInsurance))
-		pdf.Ln(6)
-
-		pdf.Cell(80, 6, "Finanzierung/Leasing:")
-		pdf.Cell(0, 6, FormatCurrencyPDF(calculation.Profile.FinancingRate*12))
-		pdf.Ln(6)
-
-		pdf.SetFont("Arial", "B", 10)
-		pdf.Cell(80, 6, "Gesamtkosten jährlich:")
-		pdf.Cell(0, 6, FormatCurrencyPDF(calculation.AnnualRunningCosts))
-		pdf.Ln(12)
-
-		// Depreciation section
-		pdf.SetFont("Arial", "B", 12)
-		pdf.Cell(0, 8, "Wertverlust")
-		pdf.Ln(8)
-
-		pdf.SetFont("Arial", "", 10)
-		pdf.Cell(80, 6, "Kaufpreis:")
-		pdf.Cell(0, 6, FormatCurrencyPDF(calculation.Profile.PurchasePrice))
-		pdf.Ln(6)
-
-		pdf.Cell(80, 6, "Besitzdauer:")
-		pdf.Cell(0, 6, fmt.Sprintf("%d Jahre", calculation.Profile.ExpectedYearsOfOwnership))
-		pdf.Ln(6)
-
-		pdf.Cell(80, 6, "Jährlicher Wertverlust:")
-		pdf.Cell(0, 6, FormatCurrencyPDF(calculation.AnnualDepreciation))
-		pdf.Ln(12)
-
-		// Key metrics section
-		pdf.SetFont("Arial", "B", 12)
-		pdf.Cell(0, 8, "Kennzahlen")
-		pdf.Ln(8)
-
-		pdf.SetFont("Arial", "", 10)
-		pdf.Cell(80, 6, "Kosten pro Kilometer:")
-		pdf.Cell(0, 6, FormatCurrencyPDF(calculation.CostPerKilometer))
-		pdf.Ln(6)
-
-		pdf.Cell(80, 6, "Monatliche Fahrleistung:")
-		pdf.Cell(0, 6, FormatKilometers(calculation.Profile.MonthlyKilometers))
-		pdf.Ln(6)
-
-		pdf.Cell(80, 6, "Gesamtkosten der Nutzung:")
-		pdf.Cell(0, 6, FormatCurrencyPDF(calculation.TotalCostOfOwnership))
-		pdf.Ln(12)
+		// Depreciation table
+		depreciationData := [][]string{
+			{"Kaufpreis:", FormatCurrencyPDF(calculation.Profile.PurchasePrice)},
+			{"Besitzdauer:", fmt.Sprintf("%d Jahre", calculation.Profile.ExpectedYearsOfOwnership)},
+			{"Jährlicher Wertverlust:", FormatCurrencyPDF(calculation.AnnualDepreciation)},
+		}
+		createSection(translations.ResultsDepreciation, depreciationData, false, 0)
 
 		// Consumption section if applicable
 		if calculation.Profile.FuelConsumption > 0 || calculation.Profile.ElectricConsumption > 0 {
-			pdf.SetFont("Arial", "B", 12)
-			pdf.Cell(0, 8, "Verbrauchsdaten")
-			pdf.Ln(8)
+			var consumptionData [][]string
 
-			pdf.SetFont("Arial", "", 10)
 			if calculation.Profile.FuelConsumption > 0 {
 				monthlyFuel := (calculation.Profile.FuelConsumption * calculation.Profile.MonthlyKilometers) / 100
-				pdf.Cell(80, 6, "Kraftstoffverbrauch monatlich:")
-				pdf.Cell(0, 6, FormatLiters(monthlyFuel))
-				pdf.Ln(6)
+				annualFuel := monthlyFuel * 12
+				consumptionData = append(consumptionData, []string{translations.MonthlyFuelAmount[:len(translations.MonthlyFuelAmount)-2], FormatLiters(monthlyFuel)})
+				consumptionData = append(consumptionData, []string{translations.AnnualFuelAmount[:len(translations.AnnualFuelAmount)-2], FormatLiters(annualFuel)})
+
+				if calculation.Profile.TankSize > 0 {
+					tanksPerMonth := monthlyFuel / calculation.Profile.TankSize
+					consumptionData = append(consumptionData, []string{translations.TanksPerMonth[:len(translations.TanksPerMonth)-2], FormatGermanNumber(tanksPerMonth, 1)})
+				}
 			}
 
 			if calculation.Profile.ElectricConsumption > 0 {
 				monthlyElectric := (calculation.Profile.ElectricConsumption * calculation.Profile.MonthlyKilometers) / 100
-				pdf.Cell(80, 6, "Stromverbrauch monatlich:")
-				pdf.Cell(0, 6, FormatKWh(monthlyElectric))
-				pdf.Ln(6)
+				annualElectric := monthlyElectric * 12
+				consumptionData = append(consumptionData, []string{translations.MonthlyElectricAmount[:len(translations.MonthlyElectricAmount)-2], FormatKWh(monthlyElectric)})
+				consumptionData = append(consumptionData, []string{translations.AnnualElectricAmount[:len(translations.AnnualElectricAmount)-2], FormatKWh(annualElectric)})
+
+				if calculation.Profile.BatterySize > 0 {
+					chargesPerMonth := monthlyElectric / calculation.Profile.BatterySize
+					consumptionData = append(consumptionData, []string{translations.ChargesPerMonth[:len(translations.ChargesPerMonth)-2], FormatGermanNumber(chargesPerMonth, 1)})
+				}
 			}
+
+			createSection(translations.ResultsConsumption, consumptionData, false, 0)
 		}
+
+		// Range information if applicable
+		var rangeData [][]string
+		if calculation.Profile.TankSize > 0 && calculation.Profile.FuelConsumption > 0 {
+			fuelRange := (calculation.Profile.TankSize / calculation.Profile.FuelConsumption) * 100
+			rangeData = append(rangeData, []string{translations.FuelRange[:len(translations.FuelRange)-2], FormatKilometers(fuelRange)})
+		}
+		if calculation.Profile.BatterySize > 0 && calculation.Profile.ElectricConsumption > 0 {
+			electricRange := (calculation.Profile.BatterySize / calculation.Profile.ElectricConsumption) * 100
+			rangeData = append(rangeData, []string{translations.ElectricRange[:len(translations.ElectricRange)-2], FormatKilometers(electricRange)})
+		}
+		if len(rangeData) > 0 {
+			createSection(translations.ResultsRange, rangeData, false, 0)
+		}
+
+		// Footer
+		pdf.SetY(-20)
+		pdf.SetFont("Arial", "I", 8)
+		pdf.SetTextColor(128, 128, 128)
+		pdf.CellFormat(0, 10, fmt.Sprintf("Erstellt mit %s", translations.AppTitle), "0", 0, "C", false, 0, "")
 
 		// Save PDF
 		err = pdf.Output(writer)
@@ -329,7 +341,7 @@ func (a *App) exportToPDF(calculation *models.CostCalculation) {
 			return
 		}
 
-		dialog.ShowInformation("Export erfolgreich", "Das PDF wurde erfolgreich erstellt.", a.window)
+		dialog.ShowInformation(translations.ExportSuccess, translations.ExportSuccessPDF, a.window)
 	}, a.window)
 
 	saveDialog.SetFilter(storage.NewExtensionFileFilter([]string{".pdf"}))
