@@ -62,7 +62,7 @@ func (a *App) showExportDialog() {
 
 	calculation := a.calculator.CalculateCosts(a.currentProfile)
 	if calculation == nil {
-		dialog.ShowError(fmt.Errorf("Berechnungsfehler"), a.window)
+		dialog.ShowError(fmt.Errorf("berechnungsfehler"), a.window)
 		return
 	}
 
