@@ -54,7 +54,7 @@ func NewApp() *App {
 	fyneApp := app.NewWithID("auto-unterhaltsrechner")
 	fyneApp.SetIcon(theme.ComputerIcon())
 
-	window := fyneApp.NewWindow("Auto-Unterhaltsrechner")
+	window := fyneApp.NewWindow("Auto-Unterhaltsrechner v0.1")
 	window.Resize(fyne.NewSize(1000, 700))
 	window.SetMaster()
 

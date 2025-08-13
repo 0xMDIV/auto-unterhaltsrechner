@@ -67,3 +67,8 @@ func FormatKWh(value float64) string {
 func FormatConsumption(value float64, unit string) string {
 	return FormatGermanNumber(value, 1) + " " + unit + "/100km"
 }
+
+// FormatCurrencyPDF formats currency for PDF export (uses EUR instead of € symbol)
+func FormatCurrencyPDF(value float64) string {
+	return FormatGermanNumber(value, 2) + " EUR"
+}

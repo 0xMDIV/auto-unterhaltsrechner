@@ -10,6 +10,7 @@ import (
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/dialog"
+	"fyne.io/fyne/v2/storage"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 	"github.com/jung-kurt/gofpdf"
@@ -89,7 +90,7 @@ func (a *App) showExportDialog() {
 }
 
 func (a *App) exportToCSV(calculation *models.CostCalculation) {
-	dialog.ShowFileSave(func(writer fyne.URIWriteCloser, err error) {
+	saveDialog := dialog.NewFileSave(func(writer fyne.URIWriteCloser, err error) {
 		if err != nil {
 			dialog.ShowError(err, a.window)
 			return
@@ -139,10 +140,14 @@ func (a *App) exportToCSV(calculation *models.CostCalculation) {
 
 		dialog.ShowInformation("Export erfolgreich", "Die Daten wurden erfolgreich exportiert.", a.window)
 	}, a.window)
+
+	saveDialog.SetFilter(storage.NewExtensionFileFilter([]string{".csv"}))
+	saveDialog.SetFileName("auto-unterhaltsrechner-export.csv")
+	saveDialog.Show()
 }
 
 func (a *App) exportToJSON(profile *models.CarProfile) {
-	dialog.ShowFileSave(func(writer fyne.URIWriteCloser, err error) {
+	saveDialog := dialog.NewFileSave(func(writer fyne.URIWriteCloser, err error) {
 		if err != nil {
 			dialog.ShowError(err, a.window)
 			return
@@ -160,10 +165,14 @@ func (a *App) exportToJSON(profile *models.CarProfile) {
 
 		dialog.ShowInformation("Export erfolgreich", "Das Profil wurde erfolgreich exportiert.", a.window)
 	}, a.window)
+
+	saveDialog.SetFilter(storage.NewExtensionFileFilter([]string{".json"}))
+	saveDialog.SetFileName("auto-unterhaltsrechner-profil.json")
+	saveDialog.Show()
 }
 
 func (a *App) exportToPDF(calculation *models.CostCalculation) {
-	dialog.ShowFileSave(func(writer fyne.URIWriteCloser, err error) {
+	saveDialog := dialog.NewFileSave(func(writer fyne.URIWriteCloser, err error) {
 		if err != nil {
 			dialog.ShowError(err, a.window)
 			return
@@ -200,28 +209,28 @@ func (a *App) exportToPDF(calculation *models.CostCalculation) {
 
 		pdf.SetFont("Arial", "", 10)
 		pdf.Cell(80, 6, "Kraftstoffkosten:")
-		pdf.Cell(0, 6, FormatCurrency(calculation.MonthlyFuelCost))
+		pdf.Cell(0, 6, FormatCurrencyPDF(calculation.MonthlyFuelCost))
 		pdf.Ln(6)
 
 		pdf.Cell(80, 6, "Stromkosten:")
-		pdf.Cell(0, 6, FormatCurrency(calculation.MonthlyElectricityCost))
+		pdf.Cell(0, 6, FormatCurrencyPDF(calculation.MonthlyElectricityCost))
 		pdf.Ln(6)
 
 		pdf.Cell(80, 6, "KFZ-Steuer:")
-		pdf.Cell(0, 6, FormatCurrency(calculation.Profile.AnnualCarTax/12))
+		pdf.Cell(0, 6, FormatCurrencyPDF(calculation.Profile.AnnualCarTax/12))
 		pdf.Ln(6)
 
 		pdf.Cell(80, 6, "Versicherung:")
-		pdf.Cell(0, 6, FormatCurrency(calculation.Profile.AnnualCarInsurance/12))
+		pdf.Cell(0, 6, FormatCurrencyPDF(calculation.Profile.AnnualCarInsurance/12))
 		pdf.Ln(6)
 
 		pdf.Cell(80, 6, "Finanzierung/Leasing:")
-		pdf.Cell(0, 6, FormatCurrency(calculation.Profile.FinancingRate))
+		pdf.Cell(0, 6, FormatCurrencyPDF(calculation.Profile.FinancingRate))
 		pdf.Ln(6)
 
 		pdf.SetFont("Arial", "B", 10)
 		pdf.Cell(80, 6, "Gesamtkosten monatlich:")
-		pdf.Cell(0, 6, FormatCurrency(calculation.MonthlyRunningCosts))
+		pdf.Cell(0, 6, FormatCurrencyPDF(calculation.MonthlyRunningCosts))
 		pdf.Ln(12)
 
 		// Annual costs section
@@ -231,28 +240,28 @@ func (a *App) exportToPDF(calculation *models.CostCalculation) {
 
 		pdf.SetFont("Arial", "", 10)
 		pdf.Cell(80, 6, "Kraftstoffkosten:")
-		pdf.Cell(0, 6, FormatCurrency(calculation.AnnualFuelCost))
+		pdf.Cell(0, 6, FormatCurrencyPDF(calculation.AnnualFuelCost))
 		pdf.Ln(6)
 
 		pdf.Cell(80, 6, "Stromkosten:")
-		pdf.Cell(0, 6, FormatCurrency(calculation.AnnualElectricityCost))
+		pdf.Cell(0, 6, FormatCurrencyPDF(calculation.AnnualElectricityCost))
 		pdf.Ln(6)
 
 		pdf.Cell(80, 6, "KFZ-Steuer:")
-		pdf.Cell(0, 6, FormatCurrency(calculation.Profile.AnnualCarTax))
+		pdf.Cell(0, 6, FormatCurrencyPDF(calculation.Profile.AnnualCarTax))
 		pdf.Ln(6)
 
 		pdf.Cell(80, 6, "Versicherung:")
-		pdf.Cell(0, 6, FormatCurrency(calculation.Profile.AnnualCarInsurance))
+		pdf.Cell(0, 6, FormatCurrencyPDF(calculation.Profile.AnnualCarInsurance))
 		pdf.Ln(6)
 
 		pdf.Cell(80, 6, "Finanzierung/Leasing:")
-		pdf.Cell(0, 6, FormatCurrency(calculation.Profile.FinancingRate*12))
+		pdf.Cell(0, 6, FormatCurrencyPDF(calculation.Profile.FinancingRate*12))
 		pdf.Ln(6)
 
 		pdf.SetFont("Arial", "B", 10)
 		pdf.Cell(80, 6, "Gesamtkosten jährlich:")
-		pdf.Cell(0, 6, FormatCurrency(calculation.AnnualRunningCosts))
+		pdf.Cell(0, 6, FormatCurrencyPDF(calculation.AnnualRunningCosts))
 		pdf.Ln(12)
 
 		// Depreciation section
@@ -262,7 +271,7 @@ func (a *App) exportToPDF(calculation *models.CostCalculation) {
 
 		pdf.SetFont("Arial", "", 10)
 		pdf.Cell(80, 6, "Kaufpreis:")
-		pdf.Cell(0, 6, FormatCurrency(calculation.Profile.PurchasePrice))
+		pdf.Cell(0, 6, FormatCurrencyPDF(calculation.Profile.PurchasePrice))
 		pdf.Ln(6)
 
 		pdf.Cell(80, 6, "Besitzdauer:")
@@ -270,7 +279,7 @@ func (a *App) exportToPDF(calculation *models.CostCalculation) {
 		pdf.Ln(6)
 
 		pdf.Cell(80, 6, "Jährlicher Wertverlust:")
-		pdf.Cell(0, 6, FormatCurrency(calculation.AnnualDepreciation))
+		pdf.Cell(0, 6, FormatCurrencyPDF(calculation.AnnualDepreciation))
 		pdf.Ln(12)
 
 		// Key metrics section
@@ -280,7 +289,7 @@ func (a *App) exportToPDF(calculation *models.CostCalculation) {
 
 		pdf.SetFont("Arial", "", 10)
 		pdf.Cell(80, 6, "Kosten pro Kilometer:")
-		pdf.Cell(0, 6, FormatCurrency(calculation.CostPerKilometer))
+		pdf.Cell(0, 6, FormatCurrencyPDF(calculation.CostPerKilometer))
 		pdf.Ln(6)
 
 		pdf.Cell(80, 6, "Monatliche Fahrleistung:")
@@ -288,7 +297,7 @@ func (a *App) exportToPDF(calculation *models.CostCalculation) {
 		pdf.Ln(6)
 
 		pdf.Cell(80, 6, "Gesamtkosten der Nutzung:")
-		pdf.Cell(0, 6, FormatCurrency(calculation.TotalCostOfOwnership))
+		pdf.Cell(0, 6, FormatCurrencyPDF(calculation.TotalCostOfOwnership))
 		pdf.Ln(12)
 
 		// Consumption section if applicable
@@ -322,6 +331,10 @@ func (a *App) exportToPDF(calculation *models.CostCalculation) {
 
 		dialog.ShowInformation("Export erfolgreich", "Das PDF wurde erfolgreich erstellt.", a.window)
 	}, a.window)
+
+	saveDialog.SetFilter(storage.NewExtensionFileFilter([]string{".pdf"}))
+	saveDialog.SetFileName("auto-unterhaltsrechner-kostenaufstellung.pdf")
+	saveDialog.Show()
 }
 
 func (a *App) showComparisonDialog() {
